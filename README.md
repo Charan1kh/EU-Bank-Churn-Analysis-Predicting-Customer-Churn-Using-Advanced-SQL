@@ -1,4 +1,4 @@
-# EU-Bank-Churn-Analysis-and-Prediction-using-Advanced-SQL
+
 # 💲EU Bank Customer Churn Analysis For Credit Products.
 ## Overview
 This project involves **exploratory data analysis (EDA)** on a dataset containing information about bank customers. The primary objective is to uncover insights related to customer churn, focusing on various factors like demographics, product holdings, and membership status. The analysis also includes the development of key performance indicators (KPIs) to help understand churn trends and customer behavior.
