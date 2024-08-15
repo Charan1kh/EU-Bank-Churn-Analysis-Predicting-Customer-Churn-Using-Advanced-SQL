@@ -1,109 +1,131 @@
-select * from customer_churn_data;
 
--- 1. Customer Segmentation:
--- Identify different segments of customers based on their demographic and transactional data. This should include using GROUP BY clauses to aggregate customer data and determine key metrics for each segment.
--- Suggestion: Create CTEs (Common Table Expressions) to temporarily segment customers into high-risk and low-risk groups based on specific criteria like account balance and credit score.
 
--- 2. Churn Risk Prediction:
--- Build a model to predict the likelihood of a customer churning based on various factors like account tenure, transaction frequency, and service usage.
--- Use subqueries to create calculated fields (e.g., average monthly balance, total transactions in the last 6 months) and correlate these fields with churn status.
+-- 1. KPI's
+# Overall Churn Rate.
+SELECT Concat(Round((Sum(churn) / Count(*)) * 100, 1),'%') AS Overall_churn_rate
+FROM customer_churn_data;
 
--- 3. Retention Strategy Analysis:
--- Analyze which retention strategies (if data exists) have been most effective in reducing churn. This may involve joins between customer data and a hypothetical retention strategy table.
--- Implement advanced select statements to compare the effectiveness of multiple strategies, using CASE statements and subqueries to analyze customer responses.
+# Customer Lifetime Value.
+SELECT Round(Avg(balance),1) AS Average_CLV_of_churned_customers
+FROM customer_churn_data
+WHERE churn =1;
 
--- 4. Profitability Analysis:
--- Determine the profitability of retaining a customer versus acquiring a new one. This should involve subqueries to calculate lifetime value (LTV) of customers, segmenting them by churn status.
--- Use window functions to rank customers by profitability and determine thresholds for intervention strategies.
+# Churn Rate by Product Holding
+SELECT products_number, Concat(Round((Sum(churn)/Count(*)) * 100, 1),'%') AS Churn_rate
+FROM customer_churn_data
+GROUP BY products_number;
 
--- 5. Customer Demographics Impact:
--- Assess the impact of customer demographics (e.g., age, gender, geography) on churn rates. This can involve creating advanced joins and using GROUP BY with multiple fields.
--- Suggest using CTEs or subqueries to calculate churn rates for different demographic groups and identify trends.
+#Active member retention rate.
+SELECT active_member, round((1 - sum(churn) / count(*)) * 100, 2) AS retention_rate
+FROM customer_churn_data
+GROUP BY active_member;
 
--- 6. Performance Dashboard:
--- Design queries to create a performance dashboard that tracks key metrics like churn rate, average customer lifetime value, and retention strategy effectiveness.
--- Include subqueries to calculate year-over-year changes and provide insights into customer trends over time.
-
-# 1. Identify different segments of customers based on their demographic and transactional data.
-# Customer Segmentation.
-with segmentedData as (
-	select 
-		case when age between 18 and 25 then '18-25'
-			 when age between 26 and 35 then '26-35'
-			 when age between 36 and 45 then '36-45'
-			 when age between 46 and 55 then '46-55'
-			 when age between 56 and 65 then '56-65'
-			 when age between 56 and 65 then '66-75'
-			 when age between 56 and 65 then '76-85'
-			 else '86-95'
-		end as Age_Group, country, gender, balance, products_number, active_member, churn
-	from customer_churn_data)
+-- 1. Identify different segments of customers based on their demographic and transactional data.
+# Customer Segmentation.with segmenteddata AS (
+  SELECT
+    CASE 
+	   WHEN age BETWEEN 18 AND 25 THEN '18-25'
+       WHEN age BETWEEN 26 AND 35 THEN '26-35'
+       WHEN age BETWEEN 36 AND 45 THEN '36-45'
+       WHEN age BETWEEN 46 AND 55 THEN '46-55'
+       WHEN age BETWEEN 56 AND 65 THEN '56-65'
+       WHEN age BETWEEN 56 AND 65 THEN '66-75'
+       WHEN age BETWEEN 56 AND 65 THEN '76-85'
+       ELSE '86-95'
+    end AS age_group, country, gender, balance, products_number, active_member, churn
+  FROM customer_churn_data)
     
-select Age_Group, country as Country, gender as Gender, round(avg(balance),0) as Avg_Balance, count(products_number) as Num_of_products, concat(round((sum(active_member)/count(active_member))*100,0),'%') as Active_members, concat(round((sum(churn)/count(churn))*100,0),'%') as Churn_rate
-from segmentedData
-group by Age_Group, Country, Gender
-order by Age_Group, Country, Gender asc;
-    
-# 2. A model predicting the likelihood of a customer churning based on various factors like account tenure, transaction frequency, and service usage.
+SELECT age_group, country AS country, gender AS gender, round(avg(balance),0) AS avg_balance, count(products_number) AS num_of_products, concat(round((sum(active_member)/count(active_member))*100,0),'%') AS active_members, concat(round((sum(churn)/count(churn))*100,0),'%') AS churn_rate
+FROM segmenteddata
+GROUP BY age_group, country, gender
+ORDER BY age_group, country, gender ASC;
+
+-- 2. The impact of active membership status on churn rates across different gender and age segments.
+# Active Membership ImpactSELECT age_group, gender AS Gender, active_member AS Active_status, Count(*) AS Total_customers, Sum(churn) AS Churned_customers, Concat(Round(((Sum(churn)/Count(*)))*100,1),'%') AS Churn_rate_percentage
+FROM (
+SELECT
+  CASE
+	WHEN age BETWEEN 18 AND 25 THEN '18-25'
+    WHEN age BETWEEN 26 AND 35 THEN '26-35'
+    WHEN age BETWEEN 36 AND 45 THEN '36-45'
+    WHEN age BETWEEN 46 AND 55 THEN '46-55'
+    WHEN age BETWEEN 56 AND 65 THEN '56-65'
+    WHEN age BETWEEN 56 AND 65 THEN '66-75'
+    WHEN age BETWEEN 56 AND 65 THEN '76-85'
+    ELSE '86-95'
+  end AS Age_group, gender,
+    CASE WHEN active_member = 1 THEN 'Active'
+     ELSE 'Inactive'
+  end AS active_member, churn
+FROM customer_churn_data) AS SegmentedData
+GROUP BY age_group, gender, active_status
+ORDER BY age_group ASC;
+
+
+-- 3. A model predicting the likelihood of a customer churning based on various factors like account tenure, transaction frequency, and service usage.
 # Churn Risk Prediction.
-select customer_id, 
-	case when tenure < 6 then 25
-		 when tenure between 7 and 36 then 15
-         else 5
-	end as Tenure_score,
+SELECT customer_id,
+  CASE 
+	 WHEN tenure < 6 THEN 25
+     WHEN tenure BETWEEN 7 AND 36 THEN 15
+         ELSE 5
+  end AS Tenure_score,
     
-    case when balance between 1 and 50000 then 25
-		 when balance > 50001 then 15
-         else 5
-	end as Average_balance_score,
+    CASE 
+     WHEN balance BETWEEN 1 AND 50000 THEN 25
+     WHEN balance > 50001 THEN 15
+         ELSE 5
+  end AS Average_balance_score,
     
-    case when products_number <= 1 then 20
-		 when products_number between 2 and 3 then 10
-         else 5
-	end as Product_score, 
+    CASE 
+     WHEN products_number <= 1 THEN 20
+     WHEN products_number BETWEEN 2 AND 3 THEN 10
+         ELSE 5
+  end AS Product_score,
     
-    case when active_member = 0 then 25
-		 else 5
-	end as Activity_score,
+    CASE 
+     WHEN active_member = 0 THEN 25
+     ELSE 5
+  end AS Activity_score,
              
-	case when credit_score between 000 and 579 then 'Poor'
-		 when credit_score between 580 and 669 then 'Fair'
-		 when credit_score between 670 and 739 then 'Good'
-		 when credit_score between 740 and 799 then 'Very Good'
-         else 'Exceptional'
-	end as Service_usage_score,
+  CASE 
+     WHEN credit_score BETWEEN 000 AND 579 THEN 'Poor'
+     WHEN credit_score BETWEEN 580 AND 669 THEN 'Fair'
+     WHEN credit_score BETWEEN 670 AND 739 THEN 'Good'
+     WHEN credit_score BETWEEN 740 AND 799 THEN 'Very Good'
+         ELSE 'Exceptional'
+  end AS Service_usage_score,
     
-    least(100, 50 + (case when tenure < 6 then 25
-		 when tenure between 6 and 36 then 15
-         else 5
-	end) +
+    Least(100, 50 + (CASE WHEN tenure < 6 THEN 25 WHEN tenure BETWEEN 6 AND 36 THEN 15 ELSE 5 end) +
     
-    (case when balance between 1 and 50000 then 25
-		 when balance > 50001 then 15
-         else 5
-	end) +
-    (case when products_number <= 1 then 20
-		 when products_number between 2 and 3 then 10
-         else 5 end) 
+    (CASE 
+     WHEN balance BETWEEN 1 AND 50000 THEN 25
+     WHEN balance > 50001 THEN 15
+         ELSE 5
+  end) +
+    (CASE 
+     WHEN products_number <= 1 THEN 20
+     WHEN products_number BETWEEN 2 AND 3 THEN 10
+         ELSE 5 end)
          +
-    (case when active_member = 0 then 25
-		 else 5
-	end) +
+    (CASE 
+     WHEN active_member = 0 THEN 25
+     ELSE 5
+  end) +
     
-    (case when credit_score between 000 and 579 then 25
-		 when credit_score between 580 and 669 then 20
-		 when credit_score between 670 and 739 then 15
-		 when credit_score between 740 and 799 then 10
-         else 5
-	end)) as churn_likelihood
+    (CASE 
+     WHEN credit_score BETWEEN 000 AND 579 THEN 25
+     WHEN credit_score BETWEEN 580 AND 669 THEN 20
+     WHEN credit_score BETWEEN 670 AND 739 THEN 15
+     WHEN credit_score BETWEEN 740 AND 799 THEN 10
+         ELSE 5
+  end)) AS churn_likelihood
     
-from customer_churn_data;
+FROM customer_churn_data;
 
-		
-# 3. The impact of customer demographics (e.g., age, gender, geography) on churn rates.
-# Customer Demographics Impact.
-
-WITH agegrouped
+    
+-- 4. The impact of customer demographics (e.g., age, gender, geography) on churn rates.
+# Customer Demographics Impact.WITH agegrouped
      AS (SELECT customer_id,
                 country,
                 gender,
@@ -116,58 +138,31 @@ WITH agegrouped
                   WHEN age BETWEEN 56 AND 65 THEN '66-75'
                   WHEN age BETWEEN 56 AND 65 THEN '76-85'
                   ELSE '86-95'
-                END AS Age_group,
+                end AS age_group,
                 churn
          FROM   customer_churn_data),
      churnedratesbydemo
-     AS (SELECT country                                   AS Country,
-                gender                                    AS Gender,
+     AS (SELECT country AS country,
+                gender AS gender,
                 age_group,
-                Count(*)                                  AS Total_customers,
-                Sum(churn)                                AS Churned_customers,
-                concat(Round(( Sum(churn) / Count(*) * 100 ), 1),'%') AS
-                Churn_rate_percentage
+                count(*) AS total_customers,
+                sum(churn) AS churned_customers,
+                concat(round(( sum(churn) / count(*) * 100 ), 1),'%') AS
+                churn_rate_percentage
          FROM   agegrouped
-         GROUP  BY country,
-                   gender,
-                   age_group)
+         GROUP  BY country, gender, age_group)
 SELECT *
 FROM   churnedratesbydemo
-ORDER  BY country,
-          gender,
-          age_group ASC;
+ORDER  BY country, gender, age_group ASC;
 
 
-# 4.  Number of products a customer holds impacts their likelihood of churning
+-- 5.  Number of products a customer holds impacts their likelihood of churning
 # Product Holding Patterns.
-
-select 
-	case when products_number = 1 then '1 Prouduct'
-		 when products_number = 2 then '2 Products'
-         else '3+ Products'
-	end as Product_group, count(*) as Total_customers, sum(churn) as Churned_customers, round((sum(churn)/count(*))*100,1)as Churn_rate_percentage
-    from customer_churn_data
-    group by Product_group
-    order by Product_group asc;
-
-# 5. The impact of active membership status on churn rates across different gender and age segments.
-# Active Membership Impact
-
-select Age_group, gender as Gender, active_member as Active_status, count(*) as Total_customers, sum(churn) as Churned_customers, concat(round(((sum(churn)/count(*)))*100,1),'%') as Churn_rate_percentage
-from (
-select 
-	case when age between 18 and 25 then '18-25'
-		when age between 26 and 35 then '26-35'
-		when age between 36 and 45 then '36-45'
-		when age between 46 and 55 then '46-55'
-		when age between 56 and 65 then '56-65'
-		when age between 56 and 65 then '66-75'
-		when age between 56 and 65 then '76-85'
-		else '86-95'
-	end as Age_group, gender,
-    case when active_member = 1 then 'Active'
-		 else 'Inactive'
-	end as active_member, churn
-from customer_churn_data) as SegmentedData
-group by Age_group, Gender, Active_status
-order by Age_group asc;
+SELECT
+  CASE 
+     WHEN products_number = 1 THEN '1 Prouduct'
+     WHEN products_number = 2 THEN '2 Products'
+	 ELSE '3+ Products' end AS Product_group, Count(*) AS Total_customers, Sum(churn) AS Churned_customers, Round((Sum(churn)/Count(*))*100,1)AS Churn_rate_percentage
+    FROM customer_churn_data
+    GROUP BY product_group
+    ORDER BY product_group ASC;
