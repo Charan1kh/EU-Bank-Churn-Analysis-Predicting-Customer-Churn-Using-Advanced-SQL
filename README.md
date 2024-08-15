@@ -59,12 +59,14 @@ Explores how active membership status impacts churn rates across different demog
 Builds a model to predict the likelihood of a customer churning based on various factors like account tenure, balance, and product holding.
 
 ![Churn Risk Prediction](https://github.com/user-attachments/assets/8a216959-803e-42c2-99ec-c40a156d0ce8)
+
 ...
 
 8. **Customer Demographics Impact**
 Assesses the impact of customer demographics (e.g., age, gender, geography) on churn rates to identify high-risk segments.
 
 ![Customer Demographics Impact](https://github.com/user-attachments/assets/0aadd735-bc61-4352-868f-e534e5bd9f1b)
+
 ...
 
 9. **Product Holding Patterns**
