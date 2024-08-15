@@ -21,7 +21,8 @@ FROM customer_churn_data
 GROUP BY active_member;
 
 -- 1. Identify different segments of customers based on their demographic and transactional data.
-# Customer Segmentation.with segmenteddata AS (
+# Customer Segmentation.
+with segmenteddata AS (
   SELECT
     CASE 
 	   WHEN age BETWEEN 18 AND 25 THEN '18-25'
@@ -41,7 +42,8 @@ GROUP BY age_group, country, gender
 ORDER BY age_group, country, gender ASC;
 
 -- 2. The impact of active membership status on churn rates across different gender and age segments.
-# Active Membership ImpactSELECT age_group, gender AS Gender, active_member AS Active_status, Count(*) AS Total_customers, Sum(churn) AS Churned_customers, Concat(Round(((Sum(churn)/Count(*)))*100,1),'%') AS Churn_rate_percentage
+# Active Membership Impact
+SELECT age_group, gender AS Gender, active_member AS Active_status, Count(*) AS Total_customers, Sum(churn) AS Churned_customers, Concat(Round(((Sum(churn)/Count(*)))*100,1),'%') AS Churn_rate_percentage
 FROM (
 SELECT
   CASE
